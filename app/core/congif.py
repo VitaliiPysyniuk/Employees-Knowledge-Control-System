@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     PG_PORT: str = os.environ.get('POSTGRES_PORT')
     PG_DB: str = os.environ.get('POSTGRES_DB')
 
-    POSTGRES_DATABASE_URL: PostgresDsn = f'postgres://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DB}'
+    POSTGRES_DATABASE_URL: PostgresDsn = f'postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DB}'
 
     REDIS_PASSWORD: str = os.environ.get('REDIS_PASSWORD')
     REDIS_HOST: str = os.environ.get('REDIS_HOST')
