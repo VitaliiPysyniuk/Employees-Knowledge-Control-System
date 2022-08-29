@@ -1,17 +1,10 @@
-<<<<<<< HEAD
 from fastapi import APIRouter, Depends, Response, status, HTTPException
 from typing import List
 from databases import Database
 
-from app.database.connection import get_db
-from app.database import queries
-from app.schemas.user import User, UserSignUp
-=======
-from fastapi import APIRouter, Depends
-from databases import Database
-
 from database.connection import get_db
->>>>>>> a0e42bc (Move inject_dbs function call to the startup function.)
+from database import queries
+from schemas.user import User, UserSignUp
 
 router = APIRouter()
 
