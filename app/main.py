@@ -12,8 +12,6 @@ cache: Redis = from_url(settings.REDIS_DATABASE_URL)
 
 app = FastAPI()
 
-app.include_router(users.router)
-
 
 @app.on_event("startup")
 async def startup():
@@ -24,5 +22,7 @@ async def startup():
 async def shutdown():
     await db.disconnect()
 
+
+app.include_router(users.router, prefix='/users', tags=['users'])
 
 inject_dbs(app, db, cache)
