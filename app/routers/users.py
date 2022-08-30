@@ -6,6 +6,7 @@ from database.connection import get_db
 from database import queries
 from schemas.user import User, UserSignUp
 
+
 router = APIRouter()
 
 
