@@ -2,7 +2,7 @@ import os
 from pydantic import BaseSettings, RedisDsn, PostgresDsn
 from dotenv import load_dotenv
 
-load_dotenv('.env')
+load_dotenv('../.env')
 
 
 class Settings(BaseSettings):

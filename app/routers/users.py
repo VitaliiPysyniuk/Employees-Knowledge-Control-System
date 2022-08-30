@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from databases import Database
 
-from app.database.connection import get_db
+from database.connection import get_db
 
 router = APIRouter()
 
