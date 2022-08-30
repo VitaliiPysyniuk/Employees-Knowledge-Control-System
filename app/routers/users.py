@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, Response, status, HTTPException
 from typing import List
 from databases import Database
 
-from app.database.connection import get_db
-from app.database import queries
-from app.schemas.user import User, UserSignUp
+from database.connection import get_db
+from database import queries
+from schemas.user import User, UserSignUp
 
 router = APIRouter()
 
