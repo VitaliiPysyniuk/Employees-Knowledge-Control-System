@@ -3,24 +3,6 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-user = Table(
-    'users',
-    Base.metadata,
-    Column('id', Integer, primary_key=True),
-    Column('email', String(50), unique=True, nullable=False),
-    Column('name', String(50), nullable=False),
-    Column('is_superuser', Boolean, server_default=text("false")),
-    Column('created_at', DateTime, server_default=func.now()),
-    Column('updated_at', DateTime, server_default=func.now(), onupdate=func.now()),
-    Column('password_id', Integer, ForeignKey('passwords.id'), unique=True, nullable=False)
-)
-
-password = Table(
-    'passwords',
-    Base.metadata,
-    Column('id', Integer, primary_key=True),
-    Column('password', String(32), nullable=False)
-)
 
 quiz_result = Table(
     'quiz_results',
@@ -29,7 +11,7 @@ quiz_result = Table(
     Column('user_score', Float, server_default=text("0.0")),
     Column('max_score', Float, server_default=text("0.0")),
     Column('finished_at', DateTime, server_default=func.now()),
-    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'))
+    Column('user_email', String(50), unique=True, nullable=False)
 )
 
 quiz = Table(
