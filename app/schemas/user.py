@@ -1,5 +1,4 @@
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
 
 
 class UserSignIn(BaseModel):
@@ -7,17 +6,22 @@ class UserSignIn(BaseModel):
     password: str
 
 
+class UserSignInSuccess(BaseModel):
+    access_token: str
+    refresh_token: str
+
+
 class UserSignUp(UserSignIn):
     name: str
 
 
-class User(BaseModel):
-    id: int
+class UserSignUpSuccess(BaseModel):
     email: EmailStr
     name: str
-    is_superuser: bool
-    created_at: datetime
-    updated_at: datetime
+    email_verified: bool
 
-    class Config:
-        orm_mode = True
+
+class User(BaseModel):
+    email: EmailStr
+    name: str
+    auth0_id: str
