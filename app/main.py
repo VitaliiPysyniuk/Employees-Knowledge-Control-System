@@ -10,7 +10,7 @@ from database.injections import inject_dbs
 
 db: Database = Database(settings.POSTGRES_DATABASE_URL)
 cache: Redis = from_url(settings.REDIS_DATABASE_URL)
-# session: ClientSession = ClientSession()
+session: ClientSession = ClientSession()
 
 app = FastAPI()
 
@@ -19,13 +19,13 @@ app = FastAPI()
 async def startup():
     await db.connect()
     inject_dbs(app, db, cache)
-    # app.state.session = session
+    app.state.session = session
 
 
 @app.on_event("shutdown")
 async def shutdown():
     await db.disconnect()
-    # await session.close()
+    await session.close()
 
 
 app.include_router(users.router, prefix='/users', tags=['users'])
