@@ -1,6 +1,15 @@
 version: "3.9"
 
 services:
+  fastapi_app:
+    build:
+      context: .
+    container_name: fastapi_app
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+
   postgres_database:
     image: postgres
     container_name: postgres_database
