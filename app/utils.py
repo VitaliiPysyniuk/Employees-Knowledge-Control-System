@@ -1,24 +1,122 @@
-from fastapi import Request, HTTPException, status, Depends
-from fastapi.security import HTTPBearer
+from fastapi import Request, HTTPException, status
 from aiohttp import ClientSession
 from six.moves.urllib.request import urlopen
 import json
 from jose import jwt
+from typing import List
+from datetime import datetime
+from itertools import groupby
+from time import time
+import shutil
+import os
+
 
 from core.congif import settings
-from schemas.user import User, UserSignIn, UserSignUp
+from schemas.user import UserSignIn, UserSignUp
+from schemas.question import FullQuestion, QuestionWithAnswersForAdmin
+from schemas.quiz import UserAnswer
 
-token_auth_scheme = HTTPBearer()
 
 
 def get_session(request: Request) -> ClientSession:
     return request.app.state.session
 
 
-def get_request_user(token: str = Depends(token_auth_scheme)) -> User:
-    token_payload = Auth0.verify(token.credentials)
+def parse_questions(instances):
+    questions = [FullQuestion(**instance).dict() for instance in instances]
+    grouped_questions = groupby(questions, key=lambda item: item['id'])
+    parsed_questions = list()
 
-    return User(email=token_payload['email'], name=token_payload['name'], auth0_id=token_payload['sub'])
+    for key, value in grouped_questions:
+        question = {
+            'id': key,
+            'question_text': '',
+            'categories': dict(),
+            'answers': dict()
+        }
+
+        for item in value:
+            question['question_text'] = item['question_text']
+            if item['id_1'] and item['id_1'] not in question['answers']:
+                question['answers'][item['id_1']] = {
+                    'id': item['id_1'],
+                    'answer_text': item['answer_text'],
+                    'is_correct': item['is_correct']
+                }
+            if item['id_2'] and item['id_2'] not in question['categories']:
+                question['categories'][item['id_2']] = {
+                    'id': item['id_2'],
+                    'name': item['name'],
+                    'description': item['description']
+                }
+
+        question['categories'] = list(question['categories'].values())
+        question['answers'] = list(question['answers'].values())
+
+        parsed_questions.append(question)
+
+    return parsed_questions
+
+
+def process_user_answers(quiz_questions: List[QuestionWithAnswersForAdmin], answers: List[UserAnswer]):
+    answers = sorted(answers, key=lambda answer: answer['question_id'])
+    user_result = {
+        'finished_at': datetime.now(),
+        'answers': list(),
+        'user_score': 0,
+        'max_score': len(quiz_questions)
+    }
+
+    if len(answers) != len(quiz_questions):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail='The number of user\'s answers does not correspond to the number of '
+                                   'questions in the quiz')
+
+    for i, answer in enumerate(answers):
+        if answer['question_id'] != quiz_questions[i]['id']:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail='User\'s answers does not correspond to the questions of the quiz')
+
+        user_result_item = {
+            'question_id': answer['question_id'],
+            'user_answer_id': answer['answer_id'],
+            'correct_answer_id': quiz_questions[i]['id_1'],
+            'is_correct': False
+        }
+
+        if answer['answer_id'] == quiz_questions[i]['id_1']:
+            user_result['user_score'] += 1
+            user_result_item['is_correct'] = True
+
+        user_result['answers'].append(user_result_item)
+
+    return user_result
+
+
+def form_user_cache_key(email, quiz_id, finished_at):
+    key = f'{email}:::{quiz_id}:::{str(finished_at)}'
+    return key
+
+
+def save_data_to_csv_file(data):
+    data = json.loads(data)
+    directory = 'csv-files'
+
+    if os.path.exists(directory):
+        shutil.rmtree(directory)
+    os.mkdir(directory)
+    filename = f'details-{time().hex()}.csv'
+
+    with open(f'{directory}/{filename}', 'w') as file:
+        file.write('quiz_id;user_email;user_score;max_score;question_id;user_answer_id;'
+                   'correct_answer_id;is_correct;finished_at\n')
+
+        for answer in data['answers']:
+            file.write(f"{data['quiz_id']};{data['user_email']};{data['user_score']};{data['max_score']};"
+                       f"{answer['question_id']};{answer['user_answer_id']};{answer['correct_answer_id']};"
+                       f"{answer['correct_answer_id']};{data['finished_at']}\n")
+
+    return filename
 
 
 class Auth0:
@@ -92,4 +190,3 @@ class Auth0:
             status_code = response.status
 
         return result, status_code
-
