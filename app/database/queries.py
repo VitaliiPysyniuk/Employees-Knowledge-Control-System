@@ -46,7 +46,7 @@ async def create_question(question_data: QuestionCreate, db: Database):
 
     for answer_data in answers_data:
         new_answer = await add_question_answer(answer_data, new_question_id, db)
-        answer_data['question_id'] = new_answer.id
+        answer_data['id'] = new_answer.id
 
     question_data['id'] = new_question_id
     question_data['answers'] = answers_data

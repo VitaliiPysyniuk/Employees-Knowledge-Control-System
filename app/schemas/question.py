@@ -43,12 +43,12 @@ class AnswerInQuestionsListForAdmin(BaseModel):
 
 class QuestionWithAnswersForUser(Question):
     answers: List[AnswerInQuestionsListForUser]
-    categories: List[Category]
+    categories: Optional[List[Category]] = []
 
 
 class QuestionWithAnswersForAdmin(Question):
     answers: List[AnswerInQuestionsListForAdmin]
-    categories: List[Category]
+    categories: Optional[List[Category]] = []
 
 
 class QuestionWithAnswer(BaseModel):
