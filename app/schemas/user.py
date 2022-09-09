@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import List
 
 
 class UserSignIn(BaseModel):
@@ -25,3 +26,4 @@ class User(BaseModel):
     email: EmailStr
     name: str
     auth0_id: str
+    roles: List[str]
