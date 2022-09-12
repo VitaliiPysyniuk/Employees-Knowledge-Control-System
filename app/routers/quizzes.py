@@ -82,6 +82,7 @@ async def get_quiz_result_details(result_id: int, csv_mode: bool = False, db: Da
 
     key = form_user_cache_key(quiz_result.user_email, quiz_result.quiz_id, quiz_result.finished_at)
     quiz_result_details = await queries.get_result_detail_from_cache(key, cache)
+    print(quiz_result_details)
 
     if csv_mode:
         filename = save_data_to_csv_file(quiz_result_details)
@@ -138,7 +139,6 @@ async def get_quiz_questions(quiz_id: int, db: Database = Depends(get_db)):
 @admin_router.post('/{quiz_id}/questions', response_model=List[QuizQuestionAssociate], dependencies=[Depends(is_admin)])
 async def add_quiz_questions(quiz_id: int, data: QuizQuestionsAdd, db: Database = Depends(get_db)):
     result = await queries.add_quiz_questions(quiz_id, data.questions, db)
-    print(result)
     return result
 
 
@@ -152,18 +152,19 @@ async def delete_quiz_question(quiz_id: int, question_id: int, db: Database = De
                             detail=f"Quiz doesn't include question with id: {question_id}")
 
 
-@user_router.post('/{quiz_id}/user-answers', response_model=UserQuizResult, dependencies=[Depends(is_user)])
+# @user_router.post('/{quiz_id}/user-answers', response_model=UserQuizResult, dependencies=[Depends(is_user)])
+@user_router.post('/{quiz_id}/user-answers', dependencies=[Depends(is_user)])
 async def process_user_result(quiz_id: int, data: UserAnswers, db: Database = Depends(get_db),
                               cache: Redis = Depends(get_cache), request_user: User = Depends(get_request_user)):
     quiz_questions = await queries.get_quiz_questions_with_correct_answers(quiz_id, db)
     quiz_questions = [QuestionWithCorrectAnswer(**question).dict() for question in quiz_questions]
 
     user_quiz_result = process_user_answers(quiz_questions, data.dict()['answers'])
-    user_quiz_result['quiz_id'] = quiz_id
-    user_quiz_result['user_email'] = request_user.email
+    user_quiz_result.quiz_id = quiz_id
+    user_quiz_result.user_email = request_user.email
 
-    key = form_user_cache_key(request_user.email, quiz_id, user_quiz_result['finished_at'])
+    key = form_user_cache_key(request_user.email, quiz_id, user_quiz_result.finished_at)
     await queries.save_result_detail_to_cache(key, deepcopy(user_quiz_result), cache)
-    result = await queries.save_result_to_db(user_quiz_result, db)
+    result = await queries.save_result_to_db(user_quiz_result.dict(), db)
 
     return result

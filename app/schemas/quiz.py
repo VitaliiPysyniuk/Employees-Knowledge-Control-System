@@ -32,21 +32,14 @@ class QuizForAdmin(BaseModel):
     description: str
     is_active: bool
 
-# toooooooooooooooooooooooooooooo deleteeeeeeeeeeeeeeeeeeeeeeee
-# toooooooooooooooooooooooooooooo deleteeeeeeeeeeeeeeeeeeeeeeee
-# toooooooooooooooooooooooooooooo deleteeeeeeeeeeeeeeeeeeeeeeee
-# toooooooooooooooooooooooooooooo deleteeeeeeeeeeeeeeeeeeeeeeee
-# class Quiz(BaseModel):
-#     id: int
-#     title: str
-#     description: str
-#     is_active: bool
 
-
-class QuizQuestionAssociate(BaseModel):
-    id: int
+class QuizQuestionAssociateCreate(BaseModel):
     quiz_id: int
     question_id: int
+
+
+class QuizQuestionAssociate(QuizQuestionAssociateCreate):
+    id: int
 
 
 class UserAnswer(BaseModel):
@@ -59,11 +52,15 @@ class UserAnswers(BaseModel):
 
 
 class UserQuizResult(BaseModel):
-    quiz_id: int
-    user_score: int
+    quiz_id: int = 0
+    user_score: int = 0
     max_score: int
     finished_at: datetime
-    user_email: EmailStr
+    user_email: EmailStr = ''
+
+
+class UserQuizResultInCache(UserQuizResult):
+    finished_at: str
 
 
 class QuizResult(UserQuizResult):
@@ -74,7 +71,7 @@ class QuizResultAnswer(BaseModel):
     question_id: int
     user_answer_id: int
     correct_answer_id: int
-    is_correct: bool
+    is_correct: bool = False
 
 
 class QuizResultAnswerForUser(BaseModel):
@@ -85,8 +82,12 @@ class QuizResultAnswerForUser(BaseModel):
 
 
 class QuizResultDetailsForAdmin(UserQuizResult):
-    answers: List[QuizResultAnswer]
+    answers: List[QuizResultAnswer] = []
 
 
 class QuizResultDetailsForUser(UserQuizResult):
-    answers: List[QuizResultAnswerForUser]
+    answers: List[QuizResultAnswerForUser] = []
+
+
+class QuizResultDetailsInCache(QuizResultDetailsForAdmin):
+    finished_at: str

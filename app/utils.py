@@ -10,12 +10,10 @@ from time import time
 import shutil
 import os
 
-
 from core.congif import settings
-from schemas.user import UserSignIn, UserSignUp
+from schemas.user import UserSignIn, UserSignUp, Auth0UserRegister, Auth0UserLogin
 from schemas.question import FullQuestion, QuestionWithAnswersForAdmin
-from schemas.quiz import UserAnswer
-
+from schemas.quiz import UserAnswer, QuizResultDetailsForAdmin, QuizResultAnswer
 
 
 def get_session(request: Request) -> ClientSession:
@@ -60,12 +58,10 @@ def parse_questions(instances):
 
 def process_user_answers(quiz_questions: List[QuestionWithAnswersForAdmin], answers: List[UserAnswer]):
     answers = sorted(answers, key=lambda answer: answer['question_id'])
-    user_result = {
-        'finished_at': datetime.now(),
-        'answers': list(),
-        'user_score': 0,
-        'max_score': len(quiz_questions)
-    }
+    user_result = QuizResultDetailsForAdmin(
+        finished_at=datetime.now(),
+        max_score=len(quiz_questions)
+    )
 
     if len(answers) != len(quiz_questions):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -77,18 +73,17 @@ def process_user_answers(quiz_questions: List[QuestionWithAnswersForAdmin], answ
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail='User\'s answers does not correspond to the questions of the quiz')
 
-        user_result_item = {
-            'question_id': answer['question_id'],
-            'user_answer_id': answer['answer_id'],
-            'correct_answer_id': quiz_questions[i]['id_1'],
-            'is_correct': False
-        }
+        user_result_item = QuizResultAnswer(
+            question_id=answer['question_id'],
+            user_answer_id=answer['answer_id'],
+            correct_answer_id=quiz_questions[i]['id_1']
+        )
 
         if answer['answer_id'] == quiz_questions[i]['id_1']:
-            user_result['user_score'] += 1
-            user_result_item['is_correct'] = True
+            user_result.user_score += 1
+            user_result_item.is_correct = True
 
-        user_result['answers'].append(user_result_item)
+        user_result.answers.append(user_result_item)
 
     return user_result
 
@@ -99,7 +94,7 @@ def form_user_cache_key(email, quiz_id, finished_at):
 
 
 def save_data_to_csv_file(data):
-    data = json.loads(data)
+    data = QuizResultDetailsForAdmin(**json.loads(data))
     directory = 'csv-files'
 
     if os.path.exists(directory):
@@ -111,10 +106,10 @@ def save_data_to_csv_file(data):
         file.write('quiz_id;user_email;user_score;max_score;question_id;user_answer_id;'
                    'correct_answer_id;is_correct;finished_at\n')
 
-        for answer in data['answers']:
-            file.write(f"{data['quiz_id']};{data['user_email']};{data['user_score']};{data['max_score']};"
-                       f"{answer['question_id']};{answer['user_answer_id']};{answer['correct_answer_id']};"
-                       f"{answer['correct_answer_id']};{data['finished_at']}\n")
+        for answer in data.answers:
+            file.write(f"{data.quiz_id};{data.user_email};{data.user_score};{data.max_score};{answer.question_id};"
+                       f"{answer.user_answer_id};{answer.correct_answer_id};{answer.correct_answer_id};"
+                       f"{data.finished_at}\n")
 
     return filename
 
@@ -122,18 +117,18 @@ def save_data_to_csv_file(data):
 class Auth0:
     @classmethod
     async def login(cls, user_creds: UserSignIn, session: ClientSession):
-        payload = {
-            'client_id': settings.CLIENT_ID,
-            'client_secret': settings.CLIENT_SECRET,
-            'audience': settings.AUDIENCE,
-            'username': user_creds.email,
-            'password': user_creds.password,
-            'grant_type': 'password',
-            'scope': 'openid offline_access'
-        }
+        payload = Auth0UserLogin(
+            client_id=settings.CLIENT_ID,
+            client_secret=settings.CLIENT_SECRET,
+            audience=settings.AUDIENCE,
+            username=user_creds.email,
+            password=user_creds.password,
+            grant_type='password',
+            scope='openid offline_access'
+        )
         url = f'https://{settings.DOMAIN}/oauth/token'
 
-        async with session.post(url, json=payload) as response:
+        async with session.post(url, json=payload.dict()) as response:
             result = await response.json()
             status_code = response.status
 
@@ -176,16 +171,16 @@ class Auth0:
 
     @classmethod
     async def register(cls, new_user_data: UserSignUp, session: ClientSession):
-        payload = {
-            'client_id': settings.CLIENT_ID,
-            'connection': settings.CONNECTION,
-            'email': new_user_data.email,
-            'password': new_user_data.password,
-            'name': new_user_data.name,
-        }
+        payload = Auth0UserRegister(
+            client_id=settings.CLIENT_ID,
+            connection=settings.CONNECTION,
+            email=new_user_data.email,
+            password=new_user_data.password,
+            name=new_user_data.name,
+        )
         url = f'https://{settings.DOMAIN}/dbconnections/signup'
 
-        async with session.post(url, json=payload) as response:
+        async with session.post(url, json=payload.dict()) as response:
             result = await response.json()
             status_code = response.status
 

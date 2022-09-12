@@ -9,7 +9,8 @@ import json
 from .models import question, answer, category, question_category_associate, quiz, quiz_question_associate, quiz_result
 from schemas.question import QuestionCreate, BaseQuestion, AnswerCreate, Answer, FullQuestion
 from schemas.category import CategoryCreate, Category
-from schemas.quiz import QuizCreate, QuizForAdmin, QuizUpdate, QuizQuestionsAdd, QuizQuestionAssociate, UserQuizResult
+from schemas.quiz import QuizCreate, QuizForAdmin, QuizUpdate, QuizQuestionsAdd, QuizQuestionAssociate, \
+    UserQuizResult, QuizQuestionAssociateCreate, QuizResultDetailsInCache
 
 
 async def get_questions(db: Database, question_id: int = None):
@@ -234,11 +235,6 @@ async def create_quiz(quiz_data: QuestionCreate, db: Database):
 
     await add_quiz_questions(new_quiz_id, questions, db, transaction)
 
-    if len(questions) > 0:
-        values_to_insert = [{'quiz_id': new_quiz_id, 'question_id': question_id} for question_id in questions]
-        query = quiz_question_associate.insert().values(values_to_insert)
-        await db.execute(query=query)
-
     await transaction.commit()
 
     return new_quiz
@@ -272,7 +268,8 @@ async def add_quiz_questions(quiz_id: int, questions_to_add: List[int], db: Data
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Questions with ids: {intersection} have already been added to the quiz")
 
-    values_to_insert = [{'quiz_id': quiz_id, 'question_id': question_id} for question_id in questions_to_add]
+    values_to_insert = [QuizQuestionAssociateCreate(quiz_id=quiz_id, question_id=question_id).dict()for question_id in
+                        questions_to_add]
     query = quiz_question_associate.insert().values(values_to_insert).returning(quiz_question_associate)
 
     try:
@@ -324,8 +321,9 @@ async def get_quiz_result_detail_from_cache(result_id, db: Redis):
 
 
 async def save_result_detail_to_cache(cache_key, data, cache: Redis):
-    data['finished_at'] = str(data['finished_at'])
-    await cache.set(cache_key, json.dumps(data))
+    data.finished_at = str(data.finished_at)
+
+    await cache.set(cache_key, json.dumps(QuizResultDetailsInCache(**data.dict()).dict()))
     await cache.expire(cache_key, 172800)
 
 
